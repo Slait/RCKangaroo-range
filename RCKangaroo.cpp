@@ -534,6 +534,7 @@ bool ParseCommandLine(int argc, char* argv[])
 			memset(gGPUs_Mask, 0, sizeof(gGPUs_Mask));
 			for (int i = 0; i < (int)strlen(gpus); i++)
 			{
+				if (gpus[i] == ',') continue;
 				if ((gpus[i] < '0') || (gpus[i] > '9'))
 				{
 					printf("ошибка: неверное значение для опции -gpu\r\n");
@@ -656,7 +657,7 @@ int main(int argc, char* argv[])
 	printf("*                    RCKangaroo v3.2  (c) 2025 RetiredCoder, Slait                    *\r\n");
 	printf("********************************************************************************\r\n\r\n");
 
-	printf("This software is free and open-source: https://github.com/RetiredC\r\n");
+	printf("This software is free and open-source: https://github.com/Slait/RCKangaroo-range\r\n");
 	printf("It demonstrates fast GPU implementation of SOTA Kangaroo method for solving ECDLP\r\n");
 
 #ifdef _WIN32
