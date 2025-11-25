@@ -300,8 +300,9 @@ __device__ __forceinline__ void SqrModP(u64* res, u64* val)
 	u32* a = (u32*)val;
 	u64 mar[28];
 	u32* b32 = (u32*)buff;
-	u32* m32 = (u32*)mar;
-//calc 512 bits
+	//calc 512 bits
+	//Optimized by splitting mar calculation to reduce register pressure
+//Group A: ab...ah
 	mul_wide_32(mar[0], a[1], a[0]); //ab
 	mul_wide_32(mar[1], a[2], a[0]); //ac
 	mul_wide_32(mar[2], a[3], a[0]); //ad
@@ -309,51 +310,71 @@ __device__ __forceinline__ void SqrModP(u64* res, u64* val)
 	mul_wide_32(mar[4], a[5], a[0]); //af
 	mul_wide_32(mar[5], a[6], a[0]); //ag
 	mul_wide_32(mar[6], a[7], a[0]); //ah
+
+//a
+	mul_wide_32(buff[0], a[0], a[0]); //aa
+	add_cc_32(b32[1], b32[1], (u32)mar[0]);
+	addc_cc_32(b32[2], (u32)(mar[0] >> 32), (u32)mar[1]);
+	addc_cc_32(b32[3], (u32)(mar[1] >> 32), (u32)mar[2]);
+	addc_cc_32(b32[4], (u32)(mar[2] >> 32), (u32)mar[3]);
+	addc_cc_32(b32[5], (u32)(mar[3] >> 32), (u32)mar[4]);
+	addc_cc_32(b32[6], (u32)(mar[4] >> 32), (u32)mar[5]);
+	addc_cc_32(b32[7], (u32)(mar[5] >> 32), (u32)mar[6]);
+	addc_cc_32(b32[8], (u32)(mar[6] >> 32), 0);
+	b32[9] = 0;
+
+//Group B: bc...bh
 	mul_wide_32(mar[7], a[2], a[1]); //bc
 	mul_wide_32(mar[8], a[3], a[1]); //bd
 	mul_wide_32(mar[9], a[4], a[1]); //be
 	mul_wide_32(mar[10], a[5], a[1]); //bf
 	mul_wide_32(mar[11], a[6], a[1]); //bg
 	mul_wide_32(mar[12], a[7], a[1]); //bh
+
+//b+	 
+	mul_wide_32(mm, a[1], a[1]); //bb
+	add_320_to_256s(b32 + 1, mar[0], mm, mar[7], mar[8], mar[9], mar[10], mar[11], mar[12]);
+
+//Group C: cd...ch
 	mul_wide_32(mar[13], a[3], a[2]); //cd
 	mul_wide_32(mar[14], a[4], a[2]); //ce
 	mul_wide_32(mar[15], a[5], a[2]); //cf
 	mul_wide_32(mar[16], a[6], a[2]); //cg
 	mul_wide_32(mar[17], a[7], a[2]); //ch
+
+	mul_wide_32(mm, a[2], a[2]); //cc
+	add_320_to_256s(b32 + 2, mar[1], mar[7], mm, mar[13], mar[14], mar[15], mar[16], mar[17]);
+
+//Group D: de...dh
 	mul_wide_32(mar[18], a[4], a[3]); //de
 	mul_wide_32(mar[19], a[5], a[3]); //df
 	mul_wide_32(mar[20], a[6], a[3]); //dg
 	mul_wide_32(mar[21], a[7], a[3]); //dh
+
+	mul_wide_32(mm, a[3], a[3]); //dd
+	add_320_to_256s(b32 + 3, mar[2], mar[8], mar[13], mm, mar[18], mar[19], mar[20], mar[21]);
+
+//Group E: ef...eh
 	mul_wide_32(mar[22], a[5], a[4]); //ef
 	mul_wide_32(mar[23], a[6], a[4]); //eg
 	mul_wide_32(mar[24], a[7], a[4]); //eh
-	mul_wide_32(mar[25], a[6], a[5]); //fg
-	mul_wide_32(mar[26], a[7], a[5]); //fh
-	mul_wide_32(mar[27], a[7], a[6]); //gh
-//a
-	mul_wide_32(buff[0], a[0], a[0]); //aa
-	add_cc_32(b32[1], b32[1], m32[0]);
-	addc_cc_32(b32[2], m32[1], m32[2]);
-	addc_cc_32(b32[3], m32[3], m32[4]);
-	addc_cc_32(b32[4], m32[5], m32[6]);
-	addc_cc_32(b32[5], m32[7], m32[8]);
-	addc_cc_32(b32[6], m32[9], m32[10]);
-	addc_cc_32(b32[7], m32[11], m32[12]);
-	addc_cc_32(b32[8], m32[13], 0);
-	b32[9] = 0;
-//b+	 
-	mul_wide_32(mm, a[1], a[1]); //bb
-	add_320_to_256s(b32 + 1, mar[0], mm, mar[7], mar[8], mar[9], mar[10], mar[11], mar[12]);
-	mul_wide_32(mm, a[2], a[2]); //cc
-	add_320_to_256s(b32 + 2, mar[1], mar[7], mm, mar[13], mar[14], mar[15], mar[16], mar[17]);
-	mul_wide_32(mm, a[3], a[3]); //dd
-	add_320_to_256s(b32 + 3, mar[2], mar[8], mar[13], mm, mar[18], mar[19], mar[20], mar[21]);
+
 	mul_wide_32(mm, a[4], a[4]); //ee
 	add_320_to_256s(b32 + 4, mar[3], mar[9], mar[14], mar[18], mm, mar[22], mar[23], mar[24]);
+
+//Group F: fg, fh
+	mul_wide_32(mar[25], a[6], a[5]); //fg
+	mul_wide_32(mar[26], a[7], a[5]); //fh
+
 	mul_wide_32(mm, a[5], a[5]); //ff
 	add_320_to_256s(b32 + 5, mar[4], mar[10], mar[15], mar[19], mar[22], mm, mar[25], mar[26]);
+
+//Group G: gh
+	mul_wide_32(mar[27], a[7], a[6]); //gh
+
 	mul_wide_32(mm, a[6], a[6]); //gg
 	add_320_to_256s(b32 + 6, mar[5], mar[11], mar[16], mar[20], mar[23], mar[25], mm, mar[27]);
+
 	mul_wide_32(mm, a[7], a[7]); //hh
 	add_320_to_256s(b32 + 7, mar[6], mar[12], mar[17], mar[21], mar[24], mar[26], mar[27], mm);
 //fast mod P
