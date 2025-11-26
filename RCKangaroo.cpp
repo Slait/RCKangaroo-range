@@ -72,7 +72,11 @@ int GetEcIntBitLength(EcInt& val)
 	{
 		if (val.data[i])
 		{
+#ifdef _WIN32
 			unsigned long index;
+#else
+			u32 index;
+#endif
 			_BitScanReverse64(&index, val.data[i]);
 			return i * 64 + index + 1;
 		}
@@ -654,7 +658,7 @@ int main(int argc, char* argv[])
 #endif
 
 	printf("********************************************************************************\r\n");
-	printf("*                    RCKangaroo v3.2.3  (c) 2025 RetiredCoder, Slait           *\r\n");
+	printf("*                    RCKangaroo v3.2.4  (c) 2025 RetiredCoder, Slait           *\r\n");
 	printf("********************************************************************************\r\n\r\n");
 
 	printf("This software is free and open-source: https://github.com/Slait/RCKangaroo-range\r\n");
