@@ -70,8 +70,10 @@ bool RCGpuKang::Prepare(EcPoint _PntToSolve, int _Range, int _DP, EcJMP* _EcJump
 			return false;
 		}
 		size = L2size;
-		if (size > persistingL2CacheMaxSize)
-			size = persistingL2CacheMaxSize;
+		int maxL2 = 0;
+		cudaDeviceGetAttribute(&maxL2, cudaDevAttrMaxPersistingL2CacheSize, CudaIndex);
+		if ((u64)maxL2 > 0 && size > (u64)maxL2)
+			size = (u64)maxL2;
 		err = cudaDeviceSetLimit(cudaLimitPersistingL2CacheSize, size); // set max allowed size for L2
 		//persisting for L2
 		cudaStreamAttrValue stream_attribute;                                                   
