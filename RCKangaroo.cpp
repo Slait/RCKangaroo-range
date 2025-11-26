@@ -536,15 +536,27 @@ bool ParseCommandLine(int argc, char* argv[])
 			char* gpus = argv[ci];
 			ci++;
 			memset(gGPUs_Mask, 0, sizeof(gGPUs_Mask));
-			for (int i = 0; i < (int)strlen(gpus); i++)
+			char* ptr = gpus;
+			while (*ptr)
 			{
-				if (gpus[i] == ',') continue;
-				if ((gpus[i] < '0') || (gpus[i] > '9'))
+				if (*ptr == ',')
+				{
+					ptr++;
+					continue;
+				}
+				if ((*ptr < '0') || (*ptr > '9'))
 				{
 					printf("ошибка: неверное значение для опции -gpu\r\n");
 					return false;
 				}
-				gGPUs_Mask[gpus[i] - '0'] = 1;
+				int id = atoi(ptr);
+				if ((id < 0) || (id >= MAX_GPU_CNT))
+				{
+					printf("ошибка: неверный ID GPU %d (макс %d)\r\n", id, MAX_GPU_CNT - 1);
+					return false;
+				}
+				gGPUs_Mask[id] = 1;
+				while ((*ptr >= '0') && (*ptr <= '9')) ptr++;
 			}
 		}
 		else
