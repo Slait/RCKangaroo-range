@@ -226,17 +226,46 @@ __device__ __forceinline__ void mul_256_by_64(u64* res, u64* val256, u64 val64)
 	addc_32(rs[9], k[8], 0);
 }
 
+__device__ __forceinline__ void mad_256_by_64(u64* res, u64* val256, u64 val64)
+{
+	u32* r = (u32*)res;
+	u32* x = (u32*)val256;
+	u32 y0 = (u32)val64;
+	u32 y1 = (u32)(val64 >> 32);
+	u64 p, c;
+
+	// Pass 0
+	mad_wide_32(p, x[0], y0, (u64)r[0]); r[0] = (u32)p; c = p >> 32;
+	mad_wide_32(p, x[1], y0, (u64)r[1]); p += c; r[1] = (u32)p; c = p >> 32;
+	mad_wide_32(p, x[2], y0, (u64)r[2]); p += c; r[2] = (u32)p; c = p >> 32;
+	mad_wide_32(p, x[3], y0, (u64)r[3]); p += c; r[3] = (u32)p; c = p >> 32;
+	mad_wide_32(p, x[4], y0, (u64)r[4]); p += c; r[4] = (u32)p; c = p >> 32;
+	mad_wide_32(p, x[5], y0, (u64)r[5]); p += c; r[5] = (u32)p; c = p >> 32;
+	mad_wide_32(p, x[6], y0, (u64)r[6]); p += c; r[6] = (u32)p; c = p >> 32;
+	mad_wide_32(p, x[7], y0, (u64)r[7]); p += c; r[7] = (u32)p; c = p >> 32;
+	r[8] = (u32)c;
+
+	// Pass 1
+	mad_wide_32(p, x[0], y1, (u64)r[1]); r[1] = (u32)p; c = p >> 32;
+	mad_wide_32(p, x[1], y1, (u64)r[2]); p += c; r[2] = (u32)p; c = p >> 32;
+	mad_wide_32(p, x[2], y1, (u64)r[3]); p += c; r[3] = (u32)p; c = p >> 32;
+	mad_wide_32(p, x[3], y1, (u64)r[4]); p += c; r[4] = (u32)p; c = p >> 32;
+	mad_wide_32(p, x[4], y1, (u64)r[5]); p += c; r[5] = (u32)p; c = p >> 32;
+	mad_wide_32(p, x[5], y1, (u64)r[6]); p += c; r[6] = (u32)p; c = p >> 32;
+	mad_wide_32(p, x[6], y1, (u64)r[7]); p += c; r[7] = (u32)p; c = p >> 32;
+	mad_wide_32(p, x[7], y1, (u64)r[8]); p += c; r[8] = (u32)p; c = p >> 32;
+	r[9] = (u32)c;
+}
+
 __device__ __forceinline__ void MulModP(u64 *res, u64 *val1, u64 *val2)
 {
 	u64 buff[8], tmp[5], tmp2[2], tmp3;
 //calc 512 bits
-	mul_256_by_64(tmp, val1, val2[1]);
 	mul_256_by_64(buff, val1, val2[0]);
-	add_320_to_256(buff + 1, tmp);
-	mul_256_by_64(tmp, val1, val2[2]);
-	add_320_to_256(buff + 2, tmp);
-	mul_256_by_64(tmp, val1, val2[3]);
-	add_320_to_256(buff + 3, tmp);
+	buff[5] = 0; buff[6] = 0; buff[7] = 0;
+	mad_256_by_64(buff + 1, val1, val2[1]);
+	mad_256_by_64(buff + 2, val1, val2[2]);
+	mad_256_by_64(buff + 3, val1, val2[3]);
 //fast mod P
 	mul_256_by_P0inv((u32*)tmp, (u32*)(buff + 4));
 	add_cc_64(buff[0], buff[0], tmp[0]);
